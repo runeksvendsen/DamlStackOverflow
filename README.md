@@ -6,7 +6,7 @@ Daml templates for a platform that allows users to ask questions and get answers
 
 One user may ask questions, and any number of other users may propose answers to this question. Finally, the party who asked the question may accept one of the answers as the approved answer.
 
-All questions and answers are intended to be publicly viewable.
+All questions and answers are publicly viewable.
 
 ## Example flow
 
