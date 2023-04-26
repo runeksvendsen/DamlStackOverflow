@@ -45,8 +45,3 @@ template Answer
     where
         signatory answerer
         observer public, questionKey._1 -- The asker of the question must also be an observer in order to check that the answer points to their question when accepting it
-
-        choice ProposeAnswer : AnswerId
-            controller answerer
-            do
-                create this
