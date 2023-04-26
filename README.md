@@ -1,86 +1,42 @@
-# Daml Fundamentals Certificate Sample App
+# Stack Overflow Daml app
 
-✨ Welcome to the Daml Fundamentals Certification Sample App! ✨
+Daml templates for a platform that allows users to ask questions and get answers, similar to Stack Overflow.
 
-As part of the certification process, you will be required to complete a backend-only capstone project that demonstrates your understanding of the material covered throughout the Daml Fundamentals Certification Path. You have the freedom to choose the topic of your project as long as it fulfills the criteria specified below. 
+## Overview
 
-**The project must include the following components that are fully operational:**
+One user may ask questions, and any number of other users may propose answers to this question. Finally, the party who asked the question may accept one of the answers as the approved answer.
 
-+ A signatory with the authority to create and archive contracts
-+ A controller with the authority to exercise choices on contracts
-+ An observer with the authority to view contracts
-+ Test scripts that verify the functionalities of the above mentioned parties
+All questions and answers are intended to be publicly viewable.
 
-**Bonus points will be awarded if you implement the following features:**
+## Example flow
 
-+ Use the propose / accept design pattern
-+ Use the try / catch block for error handling
+1. Bob asks a question
+2. Alice proposes an answer to Bob's question
+3. Charlie also proposes and answer to Bob's question
+4. Bob accepts Charlie's answer to his question
 
-**We will score all required and bonus features (6 in total) by the following:**
+## Challenges
 
-+ The feature is free of bugs
-+ Only authorized users have access to the feature
-+ The feature can be tested appropriately
-+ TX is not unexpectedly aborted 
+* Since the intention is to mimic Stack Overflow, where all questions and answers are publicly viewable, both the Question and Answer contract must be viewable by everyone. Therefore both these contracts include a Party named `public`, with the intent that everyone can act as this party in order to browse questions and answers.
 
-**Additionally, please note the following requirement:**
+* Since the act of accepting an aswer will archive an existing Question (that has no answer) and create a new one with the `answer` field set, answers must not refer to a question by its ContractId. If it did, then the act of accepting an answer to a question would make all answers to a question point to an archived contract. Instead, a key is used to refer to a Question. This key has two components: the Party who asked the question (the *asker*) as well as an integer ID (which must be unique for each *asker*). Consequently, when *partyA* creates a new Question, it's necessary to look up the latest integer ID for *partyA* and create the new question with this field incremented by one.
 
-+ You must create a README file that documents your project, including its purpose, functionality, and any important details about how it works. The README file should also include instructions on how to run the project, how to run the tests, and any dependencies required to do so. This documentation will help others understand your project and how to use it, and will also demonstrate your ability to clearly communicate about your work.
+## Instructions
 
-To help you prepare for your capstone project, we provide this sample app as a guide for the kind of app you should aim to build. The sample app has been designed to showcase the key concepts and skills that you will need to apply in your own project.
-
-We recommend that you examine this app closely, paying attention to the code structure, functionality, and the test script. We believe that this sample app will be an invaluable resource for you as you work towards your certification. Happy coding!
-
----
-
-# Project Proposal App
-Daml templates designed for a platform for proposing project ideas to get rejected/approved.
-
-### I. Overview 
-This project was created by using the `empty-skeleton` template. The project adopts and exemplifies the `proposal-accept` design pattern. A signatory can create a ProjectIdea contract. Then they can exercise the Propose choice as a controller to get the project proposal either approved or rejected by their manager. If the manager, a controller, exercises Reject choice on the proposed contract, the employee can exercise Revise choice on it to re-propose the project with updated details. Upon manager exercising the Accept choice, a Project contract is created.
-
-### II. Workflow
-1. An employee creates a ProjectIdea contract. Both colleague and manager are invited as obeservers, but manager, as a controller, is authorized to exercise either Reject or Accept choices.
-2. Upon the controller exercising Reject, a new contract is created.
-3. Revise choice can be exercised on the newly generated contract from above.
-4. Accept choice is exercised to finalize the project idea and generate a new Project contract.
-
-[![Demo](./Demo.png)](https://share.vidyard.com/watch/xbDuZMbNUbgfHmPnqzt72N?)
-
-### III. Challenge(s)
-* `controller ... can` syntax causes warning in Daml 2.0+. The code itself does not cause any issues/errors in 2.5.0 but according to the warning, the syntax will be deprecated in the future versions of Daml. More information [here](https://docs.daml.com/daml/reference/choices.html#daml-ref-controller-can-deprecation).
-* The new controller syntax requires a controller to be an observer first before they can exercise a choice, otherwise it'll throw an error: "Attempt to fetch or exercise a contract not visible to the committer." For more information, check out [this post](https://discuss.daml.com/t/error-attempt-to-fetch-or-exercise-a-contract-not-visible-to-the-committer/1304/1) on the Daml Forum.
-* The project was created by using `empty-skeleton` and the following was removed from `daml.yaml`:
+### Building
+To compile the project run:
 ```
-sandbox-options:
-   - --wall-clock-time
-```
-and replaced with the following:
-
-```
-exposed-modules:
-  - Main
-navigator-options:
- - --feature-user-management=false
-```
-For more info, check out [this post](https://discuss.daml.com/t/sandbox-options-wall-clock-time/5692/16?u=cathy_jung) on Daml Forum and [Daml Doc](https://docs.daml.com/tools/navigator/index.html?&_ga=2.48248804.337210607.1673989679-241632404.1672853064&_gac=1.17025355.1673455980.CjwKCAiA2fmdBhBpEiwA4CcHzfI2w1_D95zAr3_d6QTypOMXGTpUxtS06c55inucNwZvUZn4AebsJxoCZEgQAvD_BwE&_gl=1*elem6v*_ga*MjQxNjMyNDA0LjE2NzI4NTMwNjQ.*_ga_GVK9ZHZSMR*MTY3Mzk5NDQzOS4zMS4xLjE2NzM5OTQ3MDcuMC4wLjA.#logging-in-as-a-party).
-
-
-### IV. Building
-To compile the project
-```
-$ daml build
+daml build
 ```
 
-### V. Testing
-To test all scripts:
-Either run the pre-written script in the `Test.daml` under /daml OR run:
+### Testing
+To test the project run:
 ```
-$ daml start
+daml test
 ```
 
-### VI. Running
-To load the project into the sandbox and start navigator:
+### Running
+To load the project into the sandbox and start navigator run:
 ```
-$ daml start
+daml start
 ```

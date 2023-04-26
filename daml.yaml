@@ -1,7 +1,7 @@
-sdk-version: 2.5.0
-name: ProjectProposalApp
+sdk-version: 2.6.3
+name: DamlStackOverflow
 source: daml
-init-script: Test:setup
+init-script: Test:all
 version: 0.0.1
 dependencies:
   - daml-prim

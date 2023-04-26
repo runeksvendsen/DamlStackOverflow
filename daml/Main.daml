@@ -1,60 +1,52 @@
 module Main where
 
-type ProjectIdeaId = ContractId ProjectIdea
-type ProjectId = ContractId Project
+import DA.Text
 
-template ProjectIdea
+type AnswerId = ContractId Answer
+
+template Question
     with
-        employee : Party
-        colleague : Party
-        manager : Party
-        project : Text
-        note : Text
-    where 
-        signatory employee
-        observer colleague, manager
+        asker : Party
+        public : Party -- | It's the intention that everyone can act as this party (so that questions are publicly viewable)
+        id : Int -- | Must be unique for all questions by the same 'asker'
+        title : Text
+        body : Text
+        answer : Optional AnswerId -- | 'None' if unanswered, 'Some' if answered
+    where
+        signatory asker
+        observer public
 
-        -- employee can propose a project idea 
-        choice Propose : ProjectIdeaId -- "ProjectIdeaId" replaces "ContractId ProjectIdea"
-            controller employee
+        key (asker, id) : (Party, Int)
+        maintainer key._1
+
+        choice AcceptAnswer : ContractId Question
+            with
+                answerId : AnswerId
+            controller asker
+            do
+                -- Check that the answer is an answer to this question
+                answer <- fetch @Answer answerId
+                let thisKey = (this.asker, this.id)
+                    expectationText = unwords
+                        [ "Expected:", show thisKey <> ","
+                        , "actual:", show answer.questionKey <> "."
+                        ]
+                assertMsg (unwords ["Cannot accept an answer to a different question.", expectationText]) $
+                    answer.questionKey == thisKey
+                create this with
+                    answer = Some answerId
+
+template Answer
+    with
+        answerer : Party
+        public : Party -- | It's the intention that everyone can act as this party (so that answers are publicly viewable)
+        questionKey : (Party, Int) -- | Which question is this an answer to?
+        body : Text -- | The actual answer
+    where
+        signatory answerer
+        observer public, questionKey._1 -- The asker of the question must also be an observer in order to check that the answer points to their question when accepting it
+
+        choice ProposeAnswer : AnswerId
+            controller answerer
             do
                 create this
-
-        -- upon getting rejected, employee can revise the project idea
-        choice Revise : ProjectIdeaId
-            with
-                newProject : Text
-                newNote : Text 
-            controller employee
-            do
-                create this with
-                    project = newProject
-                    note = newNote
-
-        -- manager can reject the project idea
-        choice Reject : ProjectIdeaId 
-            with
-                feedback : Text
-            controller manager
-            do
-                create this with 
-                    note = feedback 
-        
-        -- manager can accept the project idea, which will archive the project that the choice is being exercised and create a new contract
-        choice Accept : ProjectId
-            controller manager
-            do
-                create Project with
-                    employeeInContract = employee
-                    managerInContract = manager
-                    projectTitle = project 
-                    description = note 
-
-template Project
-    with 
-        employeeInContract : Party
-        managerInContract : Party
-        projectTitle : Text 
-        description : Text 
-    where
-        signatory employeeInContract, managerInContract

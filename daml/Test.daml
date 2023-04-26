@@ -1,29 +1,84 @@
 module Test where
+
 import Main
 import Daml.Script
 
-setup : Script ProjectId
-setup = do 
+all : Script ()
+all = do
+    setupData <- setup
+    unhappyPath setupData
+    happyPath setupData
+
+    -- test that all questions and aswers are viewable by 'public'
+    questions <- query @Question [setupData.public]
+    assertMsg "Questions must be viewable by 'public'" (length questions == 2)
+    answers <- query @Answer [setupData.public]
+    assertMsg "Answers must be viewable by 'public'" (length answers == 2)
+
+data Setup = Setup with
+    alice : Party
+    bob : Party
+    public : Party
+    question : ContractId Question
+    questionId : Int
+
+setup : Script Setup
+setup = do
     alice <- allocatePartyWithHint "Alice" (PartyIdHint "Alice")
     bob <- allocatePartyWithHint "Bob" (PartyIdHint "Bob")
-    charlie <- allocatePartyWithHint "Charlie" (PartyIdHint "Charlie")
+    public <- allocatePartyWithHint "Public" (PartyIdHint "Public")
 
-    bobProjectIdea <- submit bob do
-        createCmd ProjectIdea with
-            employee = bob
-            colleague = charlie
-            manager = alice
-            project = "Daml Fundamentals Certification Capstone Rubric - Draft No. 1"
-            note = "Should include both backend AND frontend"
+    let questionId = 0
+    bobQuestion <- submit bob do
+        createCmd Question with
+            asker = bob
+            public = public
+            id = questionId
+            title = "April 20, 2023 Daml SDK release"
+            body = "Which version of the Daml SDK was released on April 20, 2023?"
+            answer = None
 
-    aliceRejects <- submit alice do 
-        exerciseCmd bobProjectIdea Reject with
-            feedback = "No way, teaching frontend at this point is too much"
-    
-    bobRevises <- submit bob do
-        exerciseCmd aliceRejects Revise with
-            newProject = "Daml Fundamentals Certification Capstone Rubric - Draft No.2"
-            newNote = "Agreed, let's focus on the Daml backend and Navigator"
+    pure $ Setup with
+        alice = alice
+        bob = bob
+        public = public
+        question = bobQuestion
+        questionId = questionId
 
-    submit alice do
-        exerciseCmd bobRevises Accept
+happyPath Setup{..} = do
+    aliceAnswer <- submit alice do
+        createCmd Answer with
+            answerer = alice
+            public = public
+            questionKey = (bob, questionId)
+            body = "Version 2.6.3"
+
+    submit bob do
+        exerciseCmd question AcceptAnswer with
+            answerId = aliceAnswer
+
+    pure ()
+
+unhappyPath Setup{..} = do
+    let questionId' = 1
+    otherQuestion <- submit bob do
+        createCmd Question with
+            asker = bob
+            public = public
+            id = questionId'
+            title = "Fastest route to 4 World Trade Center"
+            body = "What is the fastest way to get from Ramada by Wyndham Jersey City to 4 World Trade Center?"
+            answer = None
+
+    aliceAnswer <- submit alice do
+        createCmd Answer with
+            answerer = alice
+            public = public
+            questionKey = (bob, questionId')
+            body = "Take the train from Journal Square to World Trade Center"
+
+    submitMustFail bob do
+        exerciseCmd question AcceptAnswer with
+            answerId = aliceAnswer
+
+    pure ()
